@@ -26,7 +26,7 @@
           <el-card class="box-card">
             <el-tag>api:</el-tag>
             <el-tag v-text="api"  v-show="api"></el-tag>
-            <el-tagiv v-show="!api">请选择api</el-tagiv>
+            <el-tag v-show="!api">请选择api</el-tag>
           </el-card>
         </el-row>
         <!--输入-->
@@ -43,9 +43,9 @@
               </template>
               <el-form-item>
                 <el-row type="flex" justify="end">
-                  <el-rol>
+                  <el-col :span="24">
                     <el-button type="primary" @click="onSubmit" native-type="button">提交</el-button>
-                  </el-rol>
+                  </el-col>
                 </el-row>
               </el-form-item>
             </el-form>
@@ -65,7 +65,7 @@
     </el-row>
     <!--尾部-->
     <el-row type="flex" justify="end">
-      <el-col class="status">
+      <el-col :span="24" class="status">
         <el-tag v-text="server"  type="success"></el-tag>
         <el-button size="small" type="primary" @click.native="inputServer">修改</el-button>
       </el-col>
