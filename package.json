@@ -16,7 +16,8 @@
     "element-ui": "^1.0.0-rc.8",
     "lodash": "^4.16.6",
     "vue": "^2.0.1",
-    "vuex": "^2.0.0"
+    "vuex": "^2.0.0",
+    "jQuery": "3.1.1"
   },
   "devDependencies": {
     "autoprefixer": "^6.4.0",

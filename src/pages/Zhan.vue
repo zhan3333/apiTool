@@ -145,7 +145,7 @@ export default {
     },
     initData () {
       if (this.server) {
-        this.client = hprose.Client.create('http://z.zhannnnn.top')
+        this.client = hprose.Client.create(this.server)
         let promise = this.client.invoke('Test_getApiList')
         promise.then((data) => {
           console.log('get apiList: ', data)
