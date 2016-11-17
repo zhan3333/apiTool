@@ -85,7 +85,8 @@ export default {
       // hprose对象
       client: {},
       // 服务器地址
-      server: 'http://z.zhannnnn.top',
+      server: '',
+      defaultServer: 'http://z.zhannnnn.top',
       classNameArr: [],
       apiNameArr: [],
       selectApi: [],     // 选中的api，用于界面显示
@@ -102,7 +103,7 @@ export default {
     }
   },
   mounted () {
-    this.initData()
+    this.initData(this.defaultServer)
   },
   methods: {
     // 根据类名，获取该类下的api列表
@@ -143,17 +144,21 @@ export default {
       this.result = {}
       this.treeResult = []
     },
-    initData () {
-      if (this.server) {
-        this.client = hprose.Client.create(this.server)
-        let promise = this.client.invoke('Test_getApiList')
+    initData (server = '') {
+      if (server) {
+        let client = hprose.Client.create(server)
+        let promise = client.invoke('Test_getApiList')
         promise.then((data) => {
           console.log('get apiList: ', data)
           data = _.omit(data, ['ret', 'debug'])
+          this.client = client
+          this.server = server
           this.apiNameArr = data
           this.classNameArr = _.keys(data)
+          this.$message.success('修改地址成功，地址为：' + server)
         }).catch((err) => {
           console.error(err)
+          this.$message.error('操作未生效, 服务器地址异常，无法加载api信息, 地址为：' + this.server)
         })
       }
     },
@@ -162,11 +167,7 @@ export default {
 //        inputPattern: "^((https|http|ftp|rtsp|mms)://)?[a-z0-9A-Z]{3}\.[a-z0-9A-Z][a-z0-9A-Z]{0,61}?[a-z0-9A-Z]\.com|net|cn|cc (:s[0-9]{1-4})?/$",
 //        inputErrorMessage: '服务器地址输入错误'
       }).then(({ value }) => {
-        this.server = value
-        this.$message({
-          type: 'success',
-          message: '服务器地址为: ' + value
-        })
+        this.initData(value)
       }).catch(() => {
         this.$message({
           type: 'info',
@@ -196,11 +197,6 @@ export default {
         })
       }
       return result
-    }
-  },
-  watch: {
-    server: function () {
-      this.initData()
     }
   },
   computed: {
