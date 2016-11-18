@@ -3,34 +3,38 @@
     <!--头部-->
     <el-row class="head">
       <el-col :span="24" class="navigate">
+        <el-menu default-active="1" mode="horizontal" theme="dark">
+          <template v-for="(className, key) in classNameArr">
+            <el-submenu :index="className">
+              <template slot="title">{{className}}</template>
+              <template v-for="(apiName, key2) in getApiArrByClassName(className)">
+                <el-menu-item :index="apiName">
+                  <div size="mini" @click="clickApi(className, apiName)">{{apiName}}</div>
+                </el-menu-item>
+              </template>
+            </el-submenu>
+          </template>
+        </el-menu>
       </el-col>
     </el-row>
     <!--中间-->
     <el-row :gutter="10">
-      <!--api列表-->
-      <el-col :span="6" class="list">
-        <el-menu default-active="2" class="el-menu-vertical-demo" theme="light"  v-for="(className, key) in classNameArr">
-          <el-submenu :index="className">
-            <template slot="title">{{className}}</template>
-            <template v-for="(apiName, key2) in getApiArrByClassName(className)">
-              <div @click="clickApi(className, apiName)">
-                <el-menu-item :index="apiName" v-text="apiName"></el-menu-item>
-              </div>
-            </template>
-          </el-submenu>
-        </el-menu>
-      </el-col>
-      <!--表单-->
+      <!--api操作-->
       <el-col :span="18" class="main">
-        <el-row>
-          <el-card class="box-card">
+        <el-row class="row-api-info">
+          <el-card>
             <el-tag>api:</el-tag>
-            <el-tag v-text="api"  v-show="api"></el-tag>
             <el-tag v-show="!api">请选择api</el-tag>
+            <el-tag v-text="api"  v-show="api"></el-tag>
+            <el-tooltip effect="dark" content="加入常用接口" placement="right">
+              <el-tag v-show="api" type="success">
+                <el-button size="mini" type="text" @click="recordCommonUseApi" icon="plus"></el-button>
+              </el-tag>
+            </el-tooltip>
           </el-card>
         </el-row>
         <!--输入-->
-        <el-row v-show="api">
+        <el-row class="row-api-input" v-show="api">
           <el-card>
             <div slot="header" class="clearfix">
               <el-tag>输入参数</el-tag>
@@ -52,23 +56,51 @@
           </el-card>
         </el-row>
         <!--输出-->
-        <el-row v-show="api">
+        <el-row  class="row-api-output" v-show="api">
           <el-card>
             <div slot="header" class="clearfix">
               <el-tag v-text="">返回结果:</el-tag>
-              <el-tag>耗时:{{apiDoTime}}ms</el-tag>
+              <el-tag>服务器耗时:{{apiDoTime}}ms</el-tag>
+              <el-tag>总耗时:{{allDoTime}}ms</el-tag>
             </div>
             <el-tree :data="treeResult" :props="defaultProps"></el-tree>
+          </el-card>
+        </el-row>
+      </el-col>
+      <!--侧边栏-->
+      <el-col :span="6">
+        <!--常用接口块-->
+        <el-row>
+          <el-card>
+              <el-tooltip content="服务器地址" placement="left">
+                <el-tag v-text="server" hit type="success"></el-tag>
+              </el-tooltip>
+              <el-tooltip content="修改api服务器地址" placement="bottom">
+                <el-button size="small" type="primary" @click.native="inputServer">修改</el-button>
+              </el-tooltip>
+          </el-card>
+        </el-row>
+        <el-row>
+          <el-card>
+            <div slot="header">
+              <span>常用接口</span>
+            </div>
+            <template v-for="(item, key) in getCommonUseList" style="display:table;">
+              <div>
+                <el-button-group>
+                  <el-button  icon="close" type="small"
+                              @click="removeCommonUseApi(item.className, item.apiName)"></el-button>
+                  <el-button  type="small"
+                             @click="clickApi(item.className, item.apiName)">{{item.className + '_' + item.apiName}}: {{item.use}}</el-button>
+                </el-button-group>
+              </div>
+            </template>
           </el-card>
         </el-row>
       </el-col>
     </el-row>
     <!--尾部-->
     <el-row type="flex" justify="end">
-      <el-col :span="24" class="status">
-        <el-tag v-text="server"  type="success"></el-tag>
-        <el-button size="small" type="primary" @click.native="inputServer">修改</el-button>
-      </el-col>
     </el-row>
   </div>
 </template>
@@ -78,32 +110,48 @@ import hprose from '../static/hprose/hprose-html5.src'
 import {toString} from '../common/filter/util'
 let _ = require('lodash')
 let $ = require('jQuery')
+let Cookies = require('js-cookie')
+const COOKIE_COMMON_UES_API_LIST = 'commonUseApiList'    // cookie：常使用的api列表
+const COOKIE_LOGIN_INFO = 'loginInfo'        // cookie: 登陆凭据
+const COOKIE_USE_SERVER = 'useServer'   // cookie: 服务器地址
 export default {
   name: 'zhan',
   data () {
     return {
       // hprose对象
       client: {},
-      // 服务器地址
-      server: '',
       defaultServer: 'http://z.zhannnnn.top',
+      useServer: '',    // 正在使用的服务器地址
       classNameArr: [],
       apiNameArr: [],
       selectApi: [],     // 选中的api，用于界面显示
+      // 执行api实际使用时间 毫秒
+      allDoTime: 0,
       // 表单数据
       form: {},
       // api返回数据
       result: {},
+      // 登陆凭证 {once: {token: '', userId: ''}
+      loginInfo: {},
       // 树形图使用数据
       treeResult: [],
       defaultProps: {
         children: 'children',
         label: 'label'
-      }
+      },
+      // 常用api列表
+      commonUseApiList: {}    // {"server": {"Tool_ip": {className: "Tool", apiName: "ip", use: 1}, ...}}
     }
   },
   mounted () {
-    this.initData(this.defaultServer)
+    // 取出cookie
+    let loginInfo = Cookies.getJSON(COOKIE_LOGIN_INFO)
+    let useServer = Cookies.get(COOKIE_USE_SERVER)
+    let commonUseApiList = Cookies.getJSON(COOKIE_COMMON_UES_API_LIST)
+    if (useServer) this.useServer = useServer
+    if (loginInfo) this.loginInfo = loginInfo
+    if (commonUseApiList) this.commonUseApiList = commonUseApiList
+    this.initData()
   },
   methods: {
     // 根据类名，获取该类下的api列表
@@ -114,7 +162,7 @@ export default {
     clickApi (className, apiName) {
       console.log('click : ', className + '_' + apiName)
       this.cleanData()
-      this.selectApi = [className, apiName]
+      this.selectApi = {'className': className, 'apiName': apiName}
     },
     // 提交表单
     onSubmit () {
@@ -124,50 +172,89 @@ export default {
         console.error('未选择接口')
         return ''
       }
-      let args = {}
-      for (let key of _.keys(this.form)) {
-        _.set(args, key, $.parseJSON(this.form[key]))
-      }
-      console.log('args => ', args)
-      let promise = this.client.invoke(this.api, [{data: args}])
+      let startTime = (new Date()).getTime()
+      let promise = this.client.invoke(this.api, this.handleArgs())
       promise.then((result) => {
         console.info('接口' + this.api + '返回数据 :', result)
         this.result = result
         this.treeResult = this.handleResultToTree(result)
+        this.recordCommonUseApi()   // 调用记录
+        // 计算接口调用使用时间 =>毫秒
+        let endTime = (new Date()).getTime()
+        this.allDoTime = endTime - startTime
+        // 记录登陆凭证
+        if (_.has(result, 'once')) {
+          this.loginInfo = result.once
+          Cookies.set(COOKIE_LOGIN_INFO, this.loginInfo)
+        }
       }).catch((error) => {
         console.error('接口' + this.api + '返回错误: ', error)
       })
       return false
+    },
+    // 处理传入接口的参数
+    handleArgs () {
+      let args = {}
+      for (let key of _.keys(this.form)) {
+        _.set(args, key, $.parseJSON(this.form[key]))
+      }
+      if (this.loginInfo['userId'] && this.loginInfo['token']) {
+        return [{data: args, userId: this.loginInfo['userId'], token: this.loginInfo['token']}]
+      }
+      return [{data: args}]
     },
     cleanData () {
       this.selectApi = []
       this.result = {}
       this.treeResult = []
     },
-    initData (server = '') {
+    initData (server) {
+      let useServer = ''
       if (server) {
-        let client = hprose.Client.create(server)
-        let promise = client.invoke('Test_getApiList')
-        promise.then((data) => {
-          console.log('get apiList: ', data)
-          data = _.omit(data, ['ret', 'debug'])
-          this.client = client
-          this.server = server
-          this.apiNameArr = data
-          this.classNameArr = _.keys(data)
-          this.$message.success('修改地址成功，地址为：' + server)
-        }).catch((err) => {
-          console.error(err)
-          this.$message.error('操作未生效, 服务器地址异常，无法加载api信息, 地址为：' + this.server)
-        })
+        useServer = server
+      } else {
+        useServer = this.server
       }
+
+      let client = hprose.Client.create(useServer)
+      let promise = client.invoke('Test_getApiList')
+      promise.then((data) => {
+        console.log('get apiList: ', data)
+        data = _.omit(data, ['ret', 'debug'])
+        this.$message({type: 'success', showClose: true, message: '连接服务器成功：' + useServer})
+        // 开始设置数据
+        this.client = client
+        this.useServer = useServer
+        this.apiNameArr = data
+        this.classNameArr = _.keys(data)
+        Cookies.set('useServer', useServer)  // 设置cookie
+      }).catch((err) => {
+        console.error(err)
+        this.$message({type: 'error', showClose: true, message: '操作未生效, 服务器地址异常，无法加载api信息, 地址为：' + this.server})
+      })
+    },
+    checkServerUrl (url) {
+      let client = hprose.Client.create(url)
+      let promise = client.invoke('Test_getApiList')
+      return promise
     },
     inputServer () {
       this.$prompt('请输入服务器地址', '提示', {
 //        inputPattern: "^((https|http|ftp|rtsp|mms)://)?[a-z0-9A-Z]{3}\.[a-z0-9A-Z][a-z0-9A-Z]{0,61}?[a-z0-9A-Z]\.com|net|cn|cc (:s[0-9]{1-4})?/$",
 //        inputErrorMessage: '服务器地址输入错误'
       }).then(({ value }) => {
-        this.initData(value)
+        this.checkServerUrl(value).then((checkRet) => {
+          if (checkRet) {
+            this.initData(value)
+          }
+        }).catch((err) => {
+          console.error('inputServerErr', err)
+          this.$message({
+            type: 'error',
+            showClose: true,
+            message: '操作未生效，无效的服务器地址: ' + value
+          })
+        })
       }).catch(() => {
         this.$message({
           type: 'info',
@@ -197,6 +284,34 @@ export default {
         })
       }
       return result
+    },
+    // 记录使用的api数据
+    recordCommonUseApi (className, apiName) {
+      let apiInfoObj = this.selectApi
+      if (className && apiName) {
+        apiInfoObj = {
+          className: className,
+          apiName: apiName
+        }
+      }
+      let fullApiName = apiInfoObj['className'] + '_' + apiInfoObj['apiName']   // 完整api名称
+      let server = _.kebabCase(this.server)
+      if (_.has(this.commonUseApiList, server + '.' + fullApiName)) {
+        let newUse = _.get(this.commonUseApiList, server + '.' + fullApiName + '.use') + 1
+        this.commonUseApiList = _.set(_.cloneDeep(this.commonUseApiList), server + '.' + fullApiName + '.' + 'use', newUse)
+      } else {
+        let initData = {
+          className: apiInfoObj['className'],
+          apiName: apiInfoObj['apiName'],
+          use: 1,
+          server: server
+        }
+        this.commonUseApiList = _.set(_.cloneDeep(this.commonUseApiList), server + '.' + fullApiName, initData)
+      }
+    },
+    removeCommonUseApi (className, apiName) {
+      let fullName = className + '_' + apiName
+      this.commonUseApiList = _.omit(this.commonUseApiList, _.kebabCase(this.server) + '.' + fullName)
     }
   },
   computed: {
@@ -204,21 +319,21 @@ export default {
       if (_.isEmpty(this.selectApi)) {
         return ''
       } else {
-        return this.selectApi[0] + '_' + this.selectApi[1]
+        return this.selectApi['className'] + '_' + this.selectApi['apiName']
       }
     },
     className () {
       if (_.isEmpty(this.selectApi)) {
         return ''
       } else {
-        return this.selectApi[0]
+        return this.selectApi['className']
       }
     },
     apiName () {
       if (_.isEmpty(this.selectApi)) {
         return ''
       } else {
-        return this.selectApi[1]
+        return this.selectApi['apiName']
       }
     },
     params () {
@@ -231,10 +346,30 @@ export default {
       } else {
         return null
       }
+    },
+    getCommonUseList () {
+      let name = _.kebabCase(this.server)
+      let apiList = _.get(this.commonUseApiList, name, {})
+      return _.sortBy(apiList, function (n) {
+        return -n['use']
+      })
+    },
+    // 服务器地址  缓存 = 设置 > 默认
+    server () {
+      if (this.useServer) {
+        return this.useServer
+      } else {
+        return this.defaultServer
+      }
     }
   },
   filters: {
     toString
+  },
+  watch: {
+    commonUseApiList: function (val, oldVal) {
+      Cookies.set(COOKIE_COMMON_UES_API_LIST, val)
+    }
   }
 }
 </script>
@@ -252,5 +387,15 @@ export default {
   }
   .head {
     background-color: #1F2D3D;
+    margin-bottom: 10px;
+  }
+  .row-api-info {
+    margin-bottom: 10px;
+  }
+  .row-api-input {
+    margin-bottom: 10px;
+  }
+  .row-api-output {
+    margin-bottom: 10px;
   }
 </style>
