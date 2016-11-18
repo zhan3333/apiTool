@@ -42,7 +42,7 @@
             <el-form label-position="top" onkeydown="if(event.keyCode==13){return false;}">
               <template v-for="param in params">
                 <el-form-item :label="param">
-                  <el-input :value="form[param]" @input="form[param] = arguments[0]"></el-input>
+                  <el-input v-model="form[param]"></el-input>
                 </el-form-item>
               </template>
               <el-form-item>
