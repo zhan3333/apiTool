@@ -20,7 +20,7 @@
     <!--中间-->
     <el-row :gutter="10">
       <!--api操作-->
-      <el-col :span="18" class="main">
+      <el-col :span="16" class="main">
         <el-row class="row-api-info">
           <el-card>
             <el-tag>api:</el-tag>
@@ -68,7 +68,7 @@
         </el-row>
       </el-col>
       <!--侧边栏-->
-      <el-col :span="6">
+      <el-col :span="8">
         <!--常用接口块-->
         <el-row>
           <el-card>
@@ -80,6 +80,7 @@
               </el-tooltip>
           </el-card>
         </el-row>
+        <!--常用api-->
         <el-row>
           <el-card>
             <div slot="header">
@@ -88,10 +89,32 @@
             <template v-for="(item, key) in getCommonUseList" style="display:table;">
               <div>
                 <el-button-group>
+                  <el-button type="small" @click="recordCommonUseApi(item.className, item.apiName)">{{item.use}}</el-button>
                   <el-button  icon="close" type="small"
                               @click="removeCommonUseApi(item.className, item.apiName)"></el-button>
                   <el-button  type="small"
-                             @click="clickApi(item.className, item.apiName)">{{item.className + '_' + item.apiName}}: {{item.use}}</el-button>
+                             @click="clickApi(item.className, item.apiName)">{{item.className + '_' + item.apiName}}</el-button>
+                </el-button-group>
+              </div>
+            </template>
+          </el-card>
+        </el-row>
+        <!--常用服务器url-->
+        <el-row>
+          <el-card>
+            <div slot="header">
+              <span>常用服务器</span>
+            </div>
+            <template v-for="(item, key) in getCommonServerUrl" style="display:table;">
+              <div>
+                <el-button-group>
+                  <el-button type="small" @click="recordCommonServerUrl(item.url)">{{item.use}}</el-button>
+                  <el-button  icon="close" type="small"
+                              @click="removeCommonServerUrl(item.url)"></el-button>
+                  <el-button  type="small"
+                              @click="changeServer(item.url)" v-text="item.url"></el-button>
+                  <el-button  icon="edit" type="small"
+                              @click="openRemarkBox(item.url)"></el-button>
                 </el-button-group>
               </div>
             </template>
@@ -108,12 +131,14 @@
 import hprose from '../static/hprose/hprose-html5.src'
 // import {client} from '../common/hprose/hprose-vue'
 import {toString} from '../common/filter/util'
+// import * as util from '../common/util'
 let _ = require('lodash')
 let $ = require('jQuery')
 let Cookies = require('js-cookie')
-const COOKIE_COMMON_UES_API_LIST = 'commonUseApiList'    // cookie：常使用的api列表
-const COOKIE_LOGIN_INFO = 'loginInfo'        // cookie: 登陆凭据
-const COOKIE_USE_SERVER = 'useServer'   // cookie: 服务器地址
+const COOKIE_COMMON_UES_API_LIST = 'commonUseApiList'     // cookie：常使用的api列表
+const COOKIE_LOGIN_INFO = 'loginInfo'                     // cookie: 登陆凭据
+const COOKIE_USE_SERVER = 'useServer'                     // cookie: 服务器地址
+const COOKIE_COMMON_USE_SERVER_URL = 'commonUseServerUrl' // cookie: 常用服务器地址
 export default {
   name: 'zhan',
   data () {
@@ -140,7 +165,8 @@ export default {
         label: 'label'
       },
       // 常用api列表
-      commonUseApiList: {}    // {"server": {"Tool_ip": {className: "Tool", apiName: "ip", use: 1}, ...}}
+      commonUseApiList: {},    // {"server": {"Tool_ip": {className: "Tool", apiName: "ip", use: 1}, ...}}
+      commonUseServerUrl: {}    // 常用服务器地址 {'server': {'url': 'http://**.com', 'use': 1, 'remark': '可以编辑的记录'}}
     }
   },
   mounted () {
@@ -148,9 +174,11 @@ export default {
     let loginInfo = Cookies.getJSON(COOKIE_LOGIN_INFO)
     let useServer = Cookies.get(COOKIE_USE_SERVER)
     let commonUseApiList = Cookies.getJSON(COOKIE_COMMON_UES_API_LIST)
+    let commonUseServerUrl = Cookies.getJSON(COOKIE_COMMON_USE_SERVER_URL)
     if (useServer) this.useServer = useServer
     if (loginInfo) this.loginInfo = loginInfo
     if (commonUseApiList) this.commonUseApiList = commonUseApiList
+    if (commonUseServerUrl) this.commonUseServerUrl = commonUseServerUrl
     this.initData()
   },
   methods: {
@@ -227,6 +255,7 @@ export default {
         this.useServer = useServer
         this.apiNameArr = data
         this.classNameArr = _.keys(data)
+        this.recordCommonServerUrl(useServer) // 记录使用过的服务器链接
         Cookies.set('useServer', useServer)  // 设置cookie
       }).catch((err) => {
         console.error(err)
@@ -243,22 +272,25 @@ export default {
 //        inputPattern: "^((https|http|ftp|rtsp|mms)://)?[a-z0-9A-Z]{3}\.[a-z0-9A-Z][a-z0-9A-Z]{0,61}?[a-z0-9A-Z]\.com|net|cn|cc (:s[0-9]{1-4})?/$",
 //        inputErrorMessage: '服务器地址输入错误'
       }).then(({ value }) => {
-        this.checkServerUrl(value).then((checkRet) => {
-          if (checkRet) {
-            this.initData(value)
-          }
-        }).catch((err) => {
-          console.error('inputServerErr', err)
-          this.$message({
-            type: 'error',
-            showClose: true,
-            message: '操作未生效，无效的服务器地址: ' + value
-          })
-        })
+        this.changeServer(value)    // 修改服务器地址
       }).catch(() => {
         this.$message({
           type: 'info',
           message: '取消输入'
+        })
+      })
+    },
+    changeServer (url) {
+      this.checkServerUrl(url).then((checkRet) => {
+        if (checkRet) {
+          this.initData(url)
+        }
+      }).catch((err) => {
+        console.error('inputServerErr', err)
+        this.$message({
+          type: 'error',
+          showClose: true,
+          message: '操作未生效，无效的服务器地址: ' + url
         })
       })
     },
@@ -312,6 +344,53 @@ export default {
     removeCommonUseApi (className, apiName) {
       let fullName = className + '_' + apiName
       this.commonUseApiList = _.omit(this.commonUseApiList, _.kebabCase(this.server) + '.' + fullName)
+    },
+    recordCommonServerUrl (url) {
+      let server = _.kebabCase(url)
+      if (_.has(this.commonUseServerUrl, server)) {
+        let newUse = _.get(this.commonUseServerUrl, server + '.use') + 1
+        this.commonUseServerUrl = _.set(_.cloneDeep(this.commonUseServerUrl), server + '.' + 'use', newUse)
+      } else {
+        let initData = {
+          use: 1,
+          url: url,
+          remark: ''
+        }
+        this.commonUseServerUrl = _.set(_.cloneDeep(this.commonUseServerUrl), server, initData)
+      }
+    },
+    removeCommonServerUrl (url) {
+      this.commonUseServerUrl = _.omit(this.commonUseServerUrl, _.kebabCase(url))
+    },
+    remarkCommonServerUrl (url, remark) {
+      let server = _.kebabCase(url)
+      if (_.has(this.commonUseServerUrl, server)) {
+        this.commonUseServerUrl = _.set(_.cloneDeep(this.commonUseServerUrl), server + '.' + 'remark', remark)
+      } else {
+        let initData = {
+          use: 1,
+          url: server,
+          remark: remark
+        }
+        this.commonUseServerUrl = _.set(_.cloneDeep(this.commonUseServerUrl), server, initData)
+      }
+    },
+    openRemarkBox (url) {
+      this.$prompt('输入备注', '提示', {
+        confirmButtonText: '确定',
+        cancelButtonText: '取消'
+      }).then(({ value }) => {
+        this.remarkCommonServerUrl(url, value)
+        this.$message({
+          type: 'success',
+          message: '修改成功'
+        })
+      }).catch(() => {
+        this.$message({
+          type: 'info',
+          message: '取消输入'
+        })
+      })
     }
   },
   computed: {
@@ -354,6 +433,11 @@ export default {
         return -n['use']
       })
     },
+    getCommonServerUrl () {
+      return _.sortBy(this.commonUseServerUrl, function (n) {
+        return -n['use']
+      })
+    },
     // 服务器地址  缓存 = 设置 > 默认
     server () {
       if (this.useServer) {
@@ -369,6 +453,9 @@ export default {
   watch: {
     commonUseApiList: function (val, oldVal) {
       Cookies.set(COOKIE_COMMON_UES_API_LIST, val)
+    },
+    commonUseServerUrl: function (val, oldVal) {
+      Cookies.set(COOKIE_COMMON_USE_SERVER_URL, val)
     }
   }
 }
