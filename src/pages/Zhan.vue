@@ -40,9 +40,9 @@
               <el-tag>输入参数</el-tag>
             </div>
             <el-form label-position="top" onkeydown="if(event.keyCode==13){return false;}">
-              <template v-for="param in params">
-                <el-form-item :label="param">
-                  <el-input v-model="form[param]"></el-input>
+              <template v-for="(param, index) in params">
+                <el-form-item :label="index + ': ' + param">
+                  <el-input v-model="form[index]"></el-input>
                 </el-form-item>
               </template>
               <el-form-item>
@@ -133,7 +133,7 @@ import hprose from '../static/hprose/hprose-html5.src'
 import {toString} from '../common/filter/util'
 // import * as util from '../common/util'
 let _ = require('lodash')
-let $ = require('jQuery')
+// let $ = require('jQuery')
 let Cookies = require('js-cookie')
 const COOKIE_COMMON_UES_API_LIST = 'commonUseApiList'     // cookie：常使用的api列表
 const COOKIE_LOGIN_INFO = 'loginInfo'                     // cookie: 登陆凭据
@@ -151,7 +151,7 @@ export default {
       apiNameArr: [],
       selectApi: [],     // 选中的api，用于界面显示
       // 执行api实际使用时间 毫秒
-      allDoTime: 0,
+      allDoTime: null,
       // 表单数据
       form: {},
       // api返回数据
@@ -224,7 +224,7 @@ export default {
     handleArgs () {
       let args = {}
       for (let key of _.keys(this.form)) {
-        _.set(args, key, $.parseJSON(this.form[key]))
+        _.set(args, key, JSON.parse(this.form[key]))
       }
       if (this.loginInfo['userId'] && this.loginInfo['token']) {
         return [{data: args, userId: this.loginInfo['userId'], token: this.loginInfo['token']}]
@@ -235,6 +235,8 @@ export default {
       this.selectApi = []
       this.result = {}
       this.treeResult = []
+      this.form = {}
+      this.allDoTime = null
     },
     initData (server) {
       let useServer = ''
@@ -312,7 +314,7 @@ export default {
         }
       } else {
         result.push({
-          label: 'undefine' + ': ' + data
+          label: 'undefined' + ': ' + data
         })
       }
       return result
