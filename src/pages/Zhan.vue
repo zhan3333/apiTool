@@ -128,7 +128,7 @@
   </div>
 </template>
 <script type="text/ecmascript-6">
-import hprose from '../static/hprose/hprose-html5.src'
+import hprose from '../static/hprose/hprose-html5'
 // import {client} from '../common/hprose/hprose-vue'
 import {toString} from '../common/filter/util'
 // import * as util from '../common/util'
