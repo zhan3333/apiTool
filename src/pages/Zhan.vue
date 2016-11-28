@@ -191,6 +191,20 @@ export default {
       console.log('click : ', className + '_' + apiName)
       this.cleanData()
       this.selectApi = {'className': className, 'apiName': apiName}
+      let form = {}
+      let params = this.params
+      for (let key of _.keys(params)) {
+        if (params[key] === 'string') {
+          form[key] = ''
+        } else if (params[key] === 'array') {
+          form[key] = ''
+        } else if (params[key] === 'int' || params[key] === 'integer') {
+          form[key] = ''
+        } else {
+          form[key] = ''
+        }
+      }
+      this.form = form
     },
     // 提交表单
     onSubmit () {
@@ -226,6 +240,8 @@ export default {
       for (let key of _.keys(this.form)) {
         if (this.form[key]) {
           _.set(args, key, JSON.parse(this.form[key]))
+        } else {
+          _.set(args, key, this.form[key])
         }
       }
       if (this.loginInfo['userId'] && this.loginInfo['token']) {
