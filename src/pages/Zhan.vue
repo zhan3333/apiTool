@@ -224,7 +224,9 @@ export default {
     handleArgs () {
       let args = {}
       for (let key of _.keys(this.form)) {
-        _.set(args, key, JSON.parse(this.form[key]))
+        if (this.form[key]) {
+          _.set(args, key, JSON.parse(this.form[key]))
+        }
       }
       if (this.loginInfo['userId'] && this.loginInfo['token']) {
         return [{data: args, userId: this.loginInfo['userId'], token: this.loginInfo['token']}]
