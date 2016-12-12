@@ -3,7 +3,7 @@
     <!--头部-->
     <el-row class="head">
       <el-col :span="24" class="navigate">
-        <el-menu default-active="1" mode="horizontal" theme="dark">
+        <el-menu default-active="1" mode="horizontal" theme="dark" menu-trigger="click">
           <template v-for="(className, key) in classNameArr">
             <el-submenu :index="className">
               <template slot="title">{{className}}</template>
@@ -69,7 +69,7 @@
       </el-col>
       <!--侧边栏-->
       <el-col :span="8">
-        <!--常用接口块-->
+        <!--服务器信息-->
         <el-row>
           <el-card>
               <el-tooltip content="服务器地址" placement="left">
@@ -78,6 +78,9 @@
               <el-tooltip content="修改api服务器地址" placement="bottom">
                 <el-button size="small" type="primary" @click.native="inputServer">修改</el-button>
               </el-tooltip>
+            <el-tooltip content="刷新api列表" placement="bottom">
+              <el-button size="small" type="primary" @click.native="refreshServer">刷新</el-button>
+            </el-tooltip>
           </el-card>
         </el-row>
         <!--常用api-->
@@ -229,6 +232,26 @@ export default {
           this.loginInfo = result.once
           Cookies.set(COOKIE_LOGIN_INFO, this.loginInfo)
         }
+        if (_.has(result, 'ret.code')) {
+          if (result.ret.code === 0) {
+            this.$message({
+              type: 'success',
+              message: '接口返回成功'
+            })
+          } else {
+            if (result.ret.msg) {
+              this.$message({
+                type: 'error',
+                message: result.ret.code + ':' + result.ret.msg
+              })
+            } else {
+              this.$message({
+                type: 'error',
+                message: '服务器传回了未知错误'
+              })
+            }
+          }
+        }
       }).catch((error) => {
         console.error('接口' + this.api + '返回错误: ', error)
       })
@@ -256,7 +279,7 @@ export default {
       this.form = {}
       this.allDoTime = null
     },
-    initData (server) {
+    initData (server = '') {
       let useServer = ''
       if (server) {
         useServer = server
@@ -411,6 +434,10 @@ export default {
           message: '取消输入'
         })
       })
+    },
+    refreshServer () {
+      if (!this.useServer) return false
+      this.initData()
     }
   },
   computed: {
