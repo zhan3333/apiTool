@@ -3,13 +3,13 @@
     <!--头部-->
     <el-row class="head">
       <el-col :span="24" class="navigate">
-        <el-menu default-active="1" mode="horizontal" theme="dark" menu-trigger="click">
+        <el-menu default-active="1" mode="horizontal" theme="dark" menu-trigger="click" class="menu">
           <template v-for="(className, key) in classNameArr">
-            <el-submenu :index="className">
-              <template slot="title">{{className}}</template>
+            <el-submenu :index="className" class="menu-submenu">
+              <template slot="title" class="menu-submenu-title">{{className}}</template>
               <template v-for="(apiName, key2) in getApiArrByClassName(className)">
-                <el-menu-item :index="apiName">
-                  <div size="mini" @click="clickApi(className, apiName)">{{apiName}}</div>
+                <el-menu-item :index="apiName" class="submenu-item">
+                  <div size="mini" @click="clickApi(className, apiName)" class="submenu-item-title">{{apiName}}</div>
                 </el-menu-item>
               </template>
             </el-submenu>
@@ -19,8 +19,23 @@
     </el-row>
     <!--中间-->
     <el-row :gutter="10">
+      <!--侧边api列表-->
+      <el-col class="apiList" :span="4">
+        <el-menu default-active="1" theme="dark">
+          <template v-for="(className, key) in classNameArr">
+            <el-submenu :index="className" class="menu-submenu">
+              <template slot="title" class="menu-submenu-title">{{className}}</template>
+              <template v-for="(apiName, key2) in getApiArrByClassName(className)">
+                <el-menu-item :index="apiName" class="submenu-item">
+                  <div size="mini" @click="clickApi(className, apiName)" class="submenu-item-title">{{apiName}}</div>
+                </el-menu-item>
+              </template>
+            </el-submenu>
+          </template>
+        </el-menu>
+      </el-col>
       <!--api操作-->
-      <el-col :span="16" class="main">
+      <el-col :span="14" class="main">
         <el-row class="row-api-info">
           <el-card>
             <el-tag>api:</el-tag>
@@ -68,7 +83,7 @@
         </el-row>
       </el-col>
       <!--侧边栏-->
-      <el-col :span="8">
+      <el-col :span="6">
         <!--服务器信息-->
         <el-row>
           <el-card>
@@ -532,4 +547,16 @@ export default {
   .row-api-output {
     margin-bottom: 10px;
   }
+  .head .el-menu--horizontal .el-submenu {
+    height: 40px;
+    line-height: 40px;
+  }
+  .head .el-menu--horizontal .el-submenu .el-menu-item {
+     height: 24px;
+     padding:0 5px;
+     line-height: 24px;
+  }
+
+
+
 </style>
