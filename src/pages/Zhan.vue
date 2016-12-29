@@ -74,10 +74,11 @@
           <el-card>
             <el-upload
               :action="uploadUrl"
-              :on-preview = "uploadFilePreview"
-              :on-success = "uploadFileSuccess"
-              :on-error = "uploadFileError"
-              :data = "uploadData"
+              :on-preview="uploadFilePreview"
+              :on-success="uploadFileSuccess"
+              :on-error="uploadFileError"
+              :data="uploadData"
+              :headers="uploadHeaders"
             >
               <el-button size="small" type="primary">上传文件</el-button>
             </el-upload>
@@ -119,7 +120,7 @@
               title=""
               width=""
               trigger="click"
-              :content="loginInfo.userId">
+              :content="userId">
             </el-popover>
             <el-popover
               ref="popover2"
@@ -127,7 +128,7 @@
               title=""
               width=""
               trigger="click"
-              :content="loginInfo.token">
+              :content="token">
             </el-popover>
             <el-button v-popover:popover1>userId</el-button>
             <el-button v-popover:popover2>token</el-button>
@@ -221,7 +222,11 @@ export default {
       commonUseApiList: {},    // {"server": {"Tool_ip": {className: "Tool", apiName: "ip", use: 1}, ...}}
       commonUseServerUrl: {}, // 常用服务器地址 {'server': {'url': 'http://**.com', 'use': 1, 'remark': '可以编辑的记录'}}
       retIsUploadFile: false,
-      fileInfoArr: []
+      fileInfoArr: [],
+      // 上传文件时，附带的头信息
+      uploadHeaders: {
+//        'content-type': 'application/json'
+      }
     }
   },
   mounted () {
@@ -271,7 +276,7 @@ export default {
       }
       this.retIsUploadFile = false
       let startTime = (new Date()).getTime()
-      let promise = this.client.invoke(this.api, this.handleArgs())
+      let promise = this.client.invoke(this.api, [this.handleArgs()])
       promise.then((result) => {
         console.info('接口' + this.api + '返回数据 :', result)
         this.result = result
@@ -282,7 +287,8 @@ export default {
         this.allDoTime = endTime - startTime
         // 记录登陆凭证
         if (_.has(result, 'once')) {
-          this.loginInfo = result.once
+          this.loginInfo.userId = result.once.userId
+          this.loginInfo.token = result.once.token
           Cookies.set(COOKIE_LOGIN_INFO, this.loginInfo)
         }
         if (_.has(result, 'ret.code')) {
@@ -321,9 +327,17 @@ export default {
         }
       }
       if (this.loginInfo['userId'] && this.loginInfo['token']) {
-        return [{data: args, userId: this.loginInfo['userId'], token: this.loginInfo['token']}]
+        return {data: args, userId: this.loginInfo['userId'], token: this.loginInfo['token']}
       }
-      return [{data: args}]
+      return {data: args}
+    },
+    // 处理upload提交的数据
+    handlePostArgs () {
+      let userId = _.get(this.loginInfo, 'userId', '')
+      let token = _.get(this.loginInfo, 'token', '')
+      let argsObj = {userId: userId, token: token}
+//      let args = JSON.stringify(argsObj)
+      return argsObj
     },
     cleanData () {
       this.selectApi = []
@@ -509,7 +523,7 @@ export default {
         type: 'success',
         message: '上传文件成功:' + file.name
       })
-      console.group('上传文件成功:' + file.name)
+      console.group('上传文件成功:', file.name)
       console.info('服务器返回response:', response)
       console.info('file:', file)
       console.info('fileList:', fileList)
@@ -524,7 +538,7 @@ export default {
         type: 'error',
         message: '上传文件失败:' + file.name
       })
-      console.group('上传文件失败:' + file.name)
+      console.group('上传文件失败:', file.name)
       console.error('err:', err)
       console.info('服务器返回response:', response)
       console.info('file:', file)
@@ -589,11 +603,16 @@ export default {
       return this.useServer + '/' + this.api
     },
     uploadData () {
-      let data = {
-        token: _.get(this.loginInfo, 'token', ''),
-        userId: _.get(this.loginInfo, 'userId', '')
-      }
+      let data
+      data = this.handlePostArgs()
+      console.info('data', data)
       return data
+    },
+    userId () {
+      return _.get(this.loginInfo, 'userId', '') + ''
+    },
+    token () {
+      return _.get(this.loginInfo, 'token', '') + ''
     }
   },
   filters: {
