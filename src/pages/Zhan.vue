@@ -336,6 +336,7 @@ export default {
       let userId = _.get(this.loginInfo, 'userId', '')
       let token = _.get(this.loginInfo, 'token', '')
       let argsObj = {userId: userId, token: token}
+      // todo 这里组件不支持post字符串，导致无法传参数给服务器
 //      let args = JSON.stringify(argsObj)
       return argsObj
     },
@@ -605,7 +606,6 @@ export default {
     uploadData () {
       let data
       data = this.handlePostArgs()
-      console.info('data', data)
       return data
     },
     userId () {
