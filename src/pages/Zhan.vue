@@ -90,6 +90,7 @@
               <el-tag v-text="">返回结果:</el-tag>
               <el-tag>服务器耗时:{{apiDoTime}}ms</el-tag>
               <el-tag>总耗时:{{allDoTime}}ms</el-tag>
+              <el-tag v-show="retIsUploadFile" type="success">uploadRet</el-tag>
             </div>
             <el-tree :data="treeResult" :props="defaultProps"></el-tree>
           </el-card>
@@ -219,7 +220,8 @@ export default {
       // 常用api列表
       commonUseApiList: {},    // {"server": {"Tool_ip": {className: "Tool", apiName: "ip", use: 1}, ...}}
       commonUseServerUrl: {}, // 常用服务器地址 {'server': {'url': 'http://**.com', 'use': 1, 'remark': '可以编辑的记录'}}
-      retIsUploadFile: false
+      retIsUploadFile: false,
+      fileInfoArr: []
     }
   },
   mounted () {
@@ -496,7 +498,9 @@ export default {
     // 点击上传的文件时触发
     uploadFilePreview (file) {
       console.group('文件信息:' + file.name)
-      console.info('file', file)
+      console.info('uid:' + file.uid)
+      console.info('服务器返回response:', _.get(this.fileInfoArr, file.uid, {}))
+      console.info('file:', file)
       console.groupEnd()
     },
     // 上传文件成功
@@ -506,10 +510,11 @@ export default {
         message: '上传文件成功:' + file.name
       })
       console.group('上传文件成功:' + file.name)
-      console.info('response', response)
-      console.info('file', file)
-      console.info('fileList', fileList)
+      console.info('服务器返回response:', response)
+      console.info('file:', file)
+      console.info('fileList:', fileList)
       console.groupEnd()
+      _.set(this.fileInfoArr, file.uid, response)
       this.treeResult = this.handleResultToTree(response)
       this.retIsUploadFile = true   // 表示返回的数据是上传文件返回的
     },
@@ -520,9 +525,9 @@ export default {
         message: '上传文件失败:' + file.name
       })
       console.group('上传文件失败:' + file.name)
-      console.error('err', err)
-      console.info('response', response)
-      console.info('file', file)
+      console.error('err:', err)
+      console.info('服务器返回response:', response)
+      console.info('file:', file)
       console.groupEnd()
     }
   },
