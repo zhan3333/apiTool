@@ -70,6 +70,19 @@
             </el-form>
           </el-card>
         </el-row>
+        <el-row v-show="api">
+          <el-card>
+            <el-upload
+              :action="uploadUrl"
+              :on-preview = "uploadFilePreview"
+              :on-success = "uploadFileSuccess"
+              :on-error = "uploadFileError"
+              :data = "uploadData"
+            >
+              <el-button size="small" type="primary">上传文件</el-button>
+            </el-upload>
+          </el-card>
+        </el-row>
         <!--输出-->
         <el-row  class="row-api-output" v-show="api">
           <el-card>
@@ -96,6 +109,27 @@
             <el-tooltip content="刷新api列表" placement="bottom">
               <el-button size="small" type="primary" @click.native="refreshServer">刷新</el-button>
             </el-tooltip>
+          </el-card>
+          <!--userId 与 token 显示-->
+          <el-card class="loginInfo">
+            <el-popover
+              ref="popover1"
+              placement="bottom"
+              title=""
+              width=""
+              trigger="click"
+              :content="loginInfo.userId">
+            </el-popover>
+            <el-popover
+              ref="popover2"
+              placement="bottom"
+              title=""
+              width=""
+              trigger="click"
+              :content="loginInfo.token">
+            </el-popover>
+            <el-button v-popover:popover1>userId</el-button>
+            <el-button v-popover:popover2>token</el-button>
           </el-card>
         </el-row>
         <!--常用api-->
@@ -184,7 +218,8 @@ export default {
       },
       // 常用api列表
       commonUseApiList: {},    // {"server": {"Tool_ip": {className: "Tool", apiName: "ip", use: 1}, ...}}
-      commonUseServerUrl: {}    // 常用服务器地址 {'server': {'url': 'http://**.com', 'use': 1, 'remark': '可以编辑的记录'}}
+      commonUseServerUrl: {}, // 常用服务器地址 {'server': {'url': 'http://**.com', 'use': 1, 'remark': '可以编辑的记录'}}
+      retIsUploadFile: false
     }
   },
   mounted () {
@@ -232,6 +267,7 @@ export default {
         console.error('未选择接口')
         return ''
       }
+      this.retIsUploadFile = false
       let startTime = (new Date()).getTime()
       let promise = this.client.invoke(this.api, this.handleArgs())
       promise.then((result) => {
@@ -293,6 +329,7 @@ export default {
       this.treeResult = []
       this.form = {}
       this.allDoTime = null
+      this.retIsUploadFile = false
     },
     initData (server = '') {
       let useServer = ''
@@ -306,6 +343,7 @@ export default {
       let promise = client.invoke('Test_getApiList')
       promise.then((data) => {
         console.log('get apiList: ', data)
+        this.cleanData()
         data = _.omit(data, ['ret', 'debug'])
         this.$message({type: 'success', showClose: true, message: '连接服务器成功：' + useServer})
         // 开始设置数据
@@ -453,6 +491,39 @@ export default {
     refreshServer () {
       if (!this.useServer) return false
       this.initData()
+    },
+    // upload file
+    // 点击上传的文件时触发
+    uploadFilePreview (file) {
+      console.group('文件信息:' + file.name)
+      console.info('file', file)
+      console.groupEnd()
+    },
+    // 上传文件成功
+    uploadFileSuccess (response, file, fileList) {
+      this.$message({
+        type: 'success',
+        message: '上传文件成功:' + file.name
+      })
+      console.group('上传文件成功:' + file.name)
+      console.info('response', response)
+      console.info('file', file)
+      console.info('fileList', fileList)
+      console.groupEnd()
+      this.treeResult = this.handleResultToTree(response)
+      this.retIsUploadFile = true   // 表示返回的数据是上传文件返回的
+    },
+    // 上传文件失败
+    uploadFileError (err, response, file) {
+      this.$message({
+        type: 'error',
+        message: '上传文件失败:' + file.name
+      })
+      console.group('上传文件失败:' + file.name)
+      console.error('err', err)
+      console.info('response', response)
+      console.info('file', file)
+      console.groupEnd()
     }
   },
   computed: {
@@ -507,6 +578,17 @@ export default {
       } else {
         return this.defaultServer
       }
+    },
+    // 获取上传文件的接口链接
+    uploadUrl () {
+      return this.useServer + '/' + this.api
+    },
+    uploadData () {
+      let data = {
+        token: _.get(this.loginInfo, 'token', ''),
+        userId: _.get(this.loginInfo, 'userId', '')
+      }
+      return data
     }
   },
   filters: {
@@ -555,6 +637,9 @@ export default {
      height: 24px;
      padding:0 5px;
      line-height: 24px;
+  }
+  .loginInfo {
+    font-size: 2px;
   }
 
 
