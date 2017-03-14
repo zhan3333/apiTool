@@ -189,6 +189,7 @@ import {toString} from '../common/filter/util'
 let _ = require('lodash')
 // let $ = require('jQuery')
 let Cookies = require('js-cookie')
+import * as cookie from '../common/cookie'
 const COOKIE_COMMON_UES_API_LIST = 'commonUseApiList'     // cookie：常使用的api列表
 const COOKIE_LOGIN_INFO = 'loginInfo'                     // cookie: 登陆凭据
 const COOKIE_USE_SERVER = 'useServer'                     // cookie: 服务器地址
@@ -231,7 +232,8 @@ export default {
   },
   mounted () {
     // 取出cookie
-    let loginInfo = Cookies.getJSON(COOKIE_LOGIN_INFO)
+//    let loginInfo = Cookies.getJSON(COOKIE_LOGIN_INFO)
+    let loginInfo = cookie.saveLoginInfo()
     let useServer = Cookies.get(COOKIE_USE_SERVER)
     let commonUseApiList = Cookies.getJSON(COOKIE_COMMON_UES_API_LIST)
     let commonUseServerUrl = Cookies.getJSON(COOKIE_COMMON_USE_SERVER_URL)
