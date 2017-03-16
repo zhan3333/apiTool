@@ -188,12 +188,8 @@ import {toString} from '../common/filter/util'
 // import * as util from '../common/util'
 let _ = require('lodash')
 // let $ = require('jQuery')
-let Cookies = require('js-cookie')
 import * as cookie from '../common/cookie'
-const COOKIE_COMMON_UES_API_LIST = 'commonUseApiList'     // cookie：常使用的api列表
-const COOKIE_LOGIN_INFO = 'loginInfo'                     // cookie: 登陆凭据
-const COOKIE_USE_SERVER = 'useServer'                     // cookie: 服务器地址
-const COOKIE_COMMON_USE_SERVER_URL = 'commonUseServerUrl' // cookie: 常用服务器地址
+
 export default {
   name: 'zhan',
   data () {
@@ -232,11 +228,10 @@ export default {
   },
   mounted () {
     // 取出cookie
-//    let loginInfo = Cookies.getJSON(COOKIE_LOGIN_INFO)
     let loginInfo = cookie.saveLoginInfo()
-    let useServer = Cookies.get(COOKIE_USE_SERVER)
-    let commonUseApiList = Cookies.getJSON(COOKIE_COMMON_UES_API_LIST)
-    let commonUseServerUrl = Cookies.getJSON(COOKIE_COMMON_USE_SERVER_URL)
+    let useServer = cookie.getUseServer()
+    let commonUseApiList = cookie.getCommonUseApiList()
+    let commonUseServerUrl = cookie.getCommonUseServerUrl()
     if (useServer) this.useServer = useServer
     if (loginInfo) this.loginInfo = loginInfo
     if (commonUseApiList) this.commonUseApiList = commonUseApiList
@@ -291,7 +286,7 @@ export default {
         if (_.has(result, 'once')) {
           this.loginInfo.userId = result.once.userId
           this.loginInfo.token = result.once.token
-          Cookies.set(COOKIE_LOGIN_INFO, this.loginInfo)
+          cookie.saveLoginInfo(this.loginInfo)
         }
         if (_.has(result, 'ret.code')) {
           if (result.ret.code === 0) {
@@ -371,7 +366,7 @@ export default {
         this.apiNameArr = data
         this.classNameArr = _.keys(data)
         this.recordCommonServerUrl(useServer) // 记录使用过的服务器链接
-        Cookies.set('useServer', useServer)  // 设置cookie
+        cookie.saveUseServer(useServer)
       }).catch((err) => {
         console.error(err)
         this.$message({type: 'error', showClose: true, message: '操作未生效, 服务器地址异常，无法加载api信息, 地址为：' + this.server})
@@ -622,10 +617,10 @@ export default {
   },
   watch: {
     commonUseApiList: function (val, oldVal) {
-      Cookies.set(COOKIE_COMMON_UES_API_LIST, val)
+      cookie.getCommonUseApiList(val)
     },
     commonUseServerUrl: function (val, oldVal) {
-      Cookies.set(COOKIE_COMMON_USE_SERVER_URL, val)
+      cookie.saveCommonUseServerUrl(val)
     }
   }
 }
