@@ -182,13 +182,15 @@
   </div>
 </template>
 <script type="text/ecmascript-6">
-import hprose from '../static/hprose/hprose-html5'
+// import hprose from '../static/hprose/hprose-html5'
 // import {client} from '../common/hprose/hprose-vue'
 import {toString} from '../common/filter/util'
 // import * as util from '../common/util'
 let _ = require('lodash')
 // let $ = require('jQuery')
 import * as cookie from '../common/cookie'
+// import * as apiControl from '../common/api-control'
+let request = require('request')
 
 export default {
   name: 'zhan',
@@ -196,7 +198,7 @@ export default {
     return {
       // hprose对象
       client: {},
-      defaultServer: 'http://z.zhannnnn.top',
+      defaultServer: 'http://192.168.2.67:8080',
       useServer: '',    // 正在使用的服务器地址
       classNameArr: [],
       apiNameArr: [],
@@ -223,7 +225,9 @@ export default {
       // 上传文件时，附带的头信息
       uploadHeaders: {
 //        'content-type': 'application/json'
-      }
+      },
+      // 新的数据存储
+      apiList: {}    // 接口列表
     }
   },
   mounted () {
@@ -345,6 +349,34 @@ export default {
       this.allDoTime = null
       this.retIsUploadFile = false
     },
+    initApiList () {
+      let that = this
+      let getApiListUrl = this.useServer + '/Test_getApiList'
+      let options = {
+        uri: getApiListUrl,
+        headers: {
+          Accept: 'application/json; charset=utf-8'
+//          'Content-Type': 'application/json'
+        }
+      }
+      request(options, function (error, response, body) {
+        if (error) {
+          console.error('获取api数据失败')
+          console.error(error)
+          this.$message({type: 'error', showClose: true, message: '操作未生效, 服务器地址异常，无法加载api信息, 地址为：' + that.server})
+        }
+        console.info(response)
+        let apiList = JSON.parse(body)
+        console.info('获取到接口信息', apiList)
+        that.apiList = apiList
+        that.apiNameArr = apiList
+        that.classNameArr = _.keys(apiList)
+        that.$message({type: 'success', showClose: true, message: '连接服务器成功：' + that.useServer})
+        that.cleanData()
+        that.recordCommonServerUrl(that.useServer) // 记录使用过的服务器链接
+        cookie.saveUseServer(that.useServer)
+      })
+    },
     initData (server = '') {
       let useServer = ''
       if (server) {
@@ -352,30 +384,8 @@ export default {
       } else {
         useServer = this.server
       }
-
-      let client = hprose.Client.create(useServer)
-      let promise = client.invoke('Test_getApiList')
-      promise.then((data) => {
-        console.log('get apiList: ', data)
-        this.cleanData()
-        data = _.omit(data, ['ret', 'debug'])
-        this.$message({type: 'success', showClose: true, message: '连接服务器成功：' + useServer})
-        // 开始设置数据
-        this.client = client
-        this.useServer = useServer
-        this.apiNameArr = data
-        this.classNameArr = _.keys(data)
-        this.recordCommonServerUrl(useServer) // 记录使用过的服务器链接
-        cookie.saveUseServer(useServer)
-      }).catch((err) => {
-        console.error(err)
-        this.$message({type: 'error', showClose: true, message: '操作未生效, 服务器地址异常，无法加载api信息, 地址为：' + this.server})
-      })
-    },
-    checkServerUrl (url) {
-      let client = hprose.Client.create(url)
-      let promise = client.invoke('Test_getApiList')
-      return promise
+      this.useServer = useServer
+      this.initApiList()
     },
     inputServer () {
       this.$prompt('请输入服务器地址', '提示', {
@@ -391,17 +401,18 @@ export default {
       })
     },
     changeServer (url) {
-      this.checkServerUrl(url).then((checkRet) => {
-        if (checkRet) {
-          this.initData(url)
+      let that = this
+      request(url + '/Test_getApiList', function (error, response, body) {
+        if (error) {
+          console.error('无效的服务器地址', url, error)
+          that.$message({
+            type: 'error',
+            showClose: true,
+            message: '操作未生效，无效的服务器地址: ' + url
+          })
+        } else {
+          that.initData(url)
         }
-      }).catch((err) => {
-        console.error('inputServerErr', err)
-        this.$message({
-          type: 'error',
-          showClose: true,
-          message: '操作未生效，无效的服务器地址: ' + url
-        })
       })
     },
     // 处理返回数据，处理成树形空间使用格式
