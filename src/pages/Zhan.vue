@@ -189,6 +189,7 @@ import {toString} from '../common/filter/util'
 let _ = require('lodash')
 // let $ = require('jQuery')
 import * as cookie from '../common/cookie'
+import * as apiControl from '../common/request'
 // import * as apiControl from '../common/api-control'
 let request = require('request')
 
@@ -277,8 +278,16 @@ export default {
       }
       this.retIsUploadFile = false
       let startTime = (new Date()).getTime()
-      let promise = this.client.invoke(this.api, [this.handleArgs()])
-      promise.then((result) => {
+      // 发送请求
+      let questUrl = this.useServer + '/' + this.api
+      let form = this.handleArgs()
+      console.info(form)
+      apiControl.post(questUrl, form, (error, response, body) => {
+        console.log(this.api)
+        if (error) {
+          console.error('接口' + this.api + '返回错误: ', error)
+        }
+        let result = body
         console.info('接口' + this.api + '返回数据 :', result)
         this.result = result
         this.treeResult = this.handleResultToTree(result)
@@ -286,36 +295,8 @@ export default {
         // 计算接口调用使用时间 =>毫秒
         let endTime = (new Date()).getTime()
         this.allDoTime = endTime - startTime
-        // 记录登陆凭证
-        if (_.has(result, 'once')) {
-          this.loginInfo.userId = result.once.userId
-          this.loginInfo.token = result.once.token
-          cookie.saveLoginInfo(this.loginInfo)
-        }
-        if (_.has(result, 'ret.code')) {
-          if (result.ret.code === 0) {
-            this.$message({
-              type: 'success',
-              message: '接口返回成功'
-            })
-          } else {
-            if (result.ret.msg) {
-              this.$message({
-                type: 'error',
-                message: result.ret.code + ':' + result.ret.msg
-              })
-            } else {
-              this.$message({
-                type: 'error',
-                message: '服务器传回了未知错误'
-              })
-            }
-          }
-        }
-      }).catch((error) => {
-        console.error('接口' + this.api + '返回错误: ', error)
+        // todo 记录登陆凭证
       })
-      return false
     },
     // 处理传入接口的参数
     handleArgs () {
@@ -350,31 +331,25 @@ export default {
       this.retIsUploadFile = false
     },
     initApiList () {
-      let that = this
       let getApiListUrl = this.useServer + '/Test_getApiList'
-      let options = {
-        uri: getApiListUrl,
-        headers: {
-          Accept: 'application/json; charset=utf-8'
-//          'Content-Type': 'application/json'
-        }
-      }
-      request(options, function (error, response, body) {
+      console.info(getApiListUrl)
+      apiControl.post(getApiListUrl, {}, (error, response, body) => {
         if (error) {
           console.error('获取api数据失败')
           console.error(error)
-          this.$message({type: 'error', showClose: true, message: '操作未生效, 服务器地址异常，无法加载api信息, 地址为：' + that.server})
+          this.$message({type: 'error', showClose: true, message: '操作未生效, 服务器地址异常，无法加载api信息, 地址为：' + this.server})
+          return false
         }
-        console.info(response)
-        let apiList = JSON.parse(body)
+//        let apiList = JSON.parse(body)
+        let apiList = body
         console.info('获取到接口信息', apiList)
-        that.apiList = apiList
-        that.apiNameArr = apiList
-        that.classNameArr = _.keys(apiList)
-        that.$message({type: 'success', showClose: true, message: '连接服务器成功：' + that.useServer})
-        that.cleanData()
-        that.recordCommonServerUrl(that.useServer) // 记录使用过的服务器链接
-        cookie.saveUseServer(that.useServer)
+        this.apiList = apiList
+        this.apiNameArr = apiList
+        this.classNameArr = _.keys(apiList)
+        this.$message({type: 'success', showClose: true, message: '连接服务器成功：' + this.useServer})
+        this.cleanData()
+        this.recordCommonServerUrl(this.useServer) // 记录使用过的服务器链接
+        cookie.saveUseServer(this.useServer)
       })
     },
     initData (server = '') {
@@ -389,8 +364,6 @@ export default {
     },
     inputServer () {
       this.$prompt('请输入服务器地址', '提示', {
-//        inputPattern: "^((https|http|ftp|rtsp|mms)://)?[a-z0-9A-Z]{3}\.[a-z0-9A-Z][a-z0-9A-Z]{0,61}?[a-z0-9A-Z]\.com|net|cn|cc (:s[0-9]{1-4})?/$",
-//        inputErrorMessage: '服务器地址输入错误'
       }).then(({ value }) => {
         this.changeServer(value)    // 修改服务器地址
       }).catch(() => {
