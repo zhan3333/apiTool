@@ -111,6 +111,14 @@
             <el-tooltip content="刷新api列表" placement="bottom">
               <el-button size="small" type="primary" @click.native="refreshServer">刷新</el-button>
             </el-tooltip>
+            <el-tooltip content="是否为hprose调用接口" placement="bottom">
+              <el-switch
+                v-model="isHprose"
+                on-color="#13ce66"
+                off-color="#ff4949">
+              </el-switch>
+            </el-tooltip>
+
           </el-card>
           <!--userId 与 token 显示-->
           <el-card class="loginInfo">
@@ -122,16 +130,7 @@
               trigger="click"
               :content="userId">
             </el-popover>
-            <el-popover
-              ref="popover2"
-              placement="bottom"
-              title=""
-              width=""
-              trigger="click"
-              :content="token">
-            </el-popover>
             <el-button v-popover:popover1>userId</el-button>
-            <el-button v-popover:popover2>token</el-button>
           </el-card>
         </el-row>
         <!--常用api-->
@@ -185,9 +184,9 @@
 // import hprose from '../static/hprose/hprose-html5'
 // import {client} from '../common/hprose/hprose-vue'
 import {toString} from '../common/filter/util'
-// import * as util from '../common/util'
 let _ = require('lodash')
 // let $ = require('jQuery')
+import hprose from '../static/hprose/hprose-html5'
 import * as cookie from '../common/cookie'
 import * as apiControl from '../common/request'
 // import * as apiControl from '../common/api-control'
@@ -206,6 +205,8 @@ export default {
       selectApi: [],     // 选中的api，用于界面显示
       // 执行api实际使用时间 毫秒
       allDoTime: null,
+      startTime: null,
+      endTime: null,
       // 表单数据
       form: {},
       // api返回数据
@@ -228,7 +229,8 @@ export default {
 //        'content-type': 'application/json'
       },
       // 新的数据存储
-      apiList: {}    // 接口列表
+      apiList: {},    // 接口列表
+      isHprose: true
     }
   },
   mounted () {
@@ -277,41 +279,52 @@ export default {
         return ''
       }
       this.retIsUploadFile = false
-      let startTime = (new Date()).getTime()
+      this.startTime = (new Date()).getTime()
       // 发送请求
       let questUrl = this.useServer + '/' + this.api
       let form = this.handleArgs()
       console.info(form)
-      apiControl.post(questUrl, form, (error, response, body) => {
-        console.log(this.api)
-        if (error) {
+      if (!this.isHprose) {
+        apiControl.post(questUrl, form, (error, response, body) => {
+          if (error) {
+            console.error('接口' + this.api + '返回错误: ', error)
+          }
+          this.parseSubmitReturn(body)
+        })
+      } else {
+        let client = this.getClient()
+        client.invoke(this.api, [form]).then((result) => {
+          this.parseSubmitReturn(result)
+        }).catch((error) => {
           console.error('接口' + this.api + '返回错误: ', error)
-        }
-        let result = body
-        console.info('接口' + this.api + '返回数据 :', result)
-        this.result = result
-        this.treeResult = this.handleResultToTree(result)
-        this.recordCommonUseApi()   // 调用记录
-        // 计算接口调用使用时间 =>毫秒
-        let endTime = (new Date()).getTime()
-        this.allDoTime = endTime - startTime
-        // todo 记录登陆凭证
-      })
+        })
+      }
+    },
+    parseSubmitReturn (result) {
+      // 处理接口返回值
+      console.info('接口' + this.api + '返回数据 :', result)
+      this.result = result
+      this.treeResult = this.handleResultToTree(result)
+      this.recordCommonUseApi()   // 调用记录
+      // 计算接口调用使用时间 =>毫秒
+      this.endTime = (new Date()).getTime()
+      this.allDoTime = this.endTime - this.startTime
+      // todo 记录登陆凭证
+      if (_.has(result, 'user')) {
+        this.loginInfo = result.user
+      } else {
+        this.loginInfo = {}
+      }
+    },
+    getClient () {
+      if (_.isEmpty(this.client)) {
+        console.info('is empty')
+        this.client = hprose.Client.create(this.useServer)
+      }
+      return this.client
     },
     // 处理传入接口的参数
     handleArgs () {
-//      let args = {}
-//      for (let key of _.keys(this.form)) {
-//        if (this.form[key]) {
-//          _.set(args, key, JSON.parse(this.form[key]))
-//        } else {
-//          _.set(args, key, this.form[key])
-//        }
-//      }
-//      if (this.loginInfo['userId'] && this.loginInfo['token']) {
-//        return {data: args, userId: this.loginInfo['userId'], token: this.loginInfo['token']}
-//      }
-//      return {data: args}
       let args = []
       let form = this.form
       console.info(form)
@@ -324,7 +337,11 @@ export default {
         }
         console.info('post data', args)
       })
-      return {data: args}
+      if (this.isHprose) {
+        return {data: args}
+      } else {
+        return {data: args, isHttp: true}
+      }
     },
     // 处理upload提交的数据
     handlePostArgs () {
@@ -356,6 +373,9 @@ export default {
 //        let apiList = JSON.parse(body)
         let apiList = body
         console.info('获取到接口信息', apiList)
+        if (_.has(apiList, 'debug')) {
+          delete apiList.debug
+        }
         this.apiList = apiList
         this.apiNameArr = apiList
         this.classNameArr = _.keys(apiList)
