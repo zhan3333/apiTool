@@ -300,17 +300,30 @@ export default {
     },
     // 处理传入接口的参数
     handleArgs () {
-      let args = {}
-      for (let key of _.keys(this.form)) {
+//      let args = {}
+//      for (let key of _.keys(this.form)) {
+//        if (this.form[key]) {
+//          _.set(args, key, JSON.parse(this.form[key]))
+//        } else {
+//          _.set(args, key, this.form[key])
+//        }
+//      }
+//      if (this.loginInfo['userId'] && this.loginInfo['token']) {
+//        return {data: args, userId: this.loginInfo['userId'], token: this.loginInfo['token']}
+//      }
+//      return {data: args}
+      let args = []
+      let form = this.form
+      console.info(form)
+      _.forEach(form, (value, key) => {
+        console.info(value, key)
         if (this.form[key]) {
-          _.set(args, key, JSON.parse(this.form[key]))
+          args.push(JSON.parse(value))
         } else {
-          _.set(args, key, this.form[key])
+          args.push('')
         }
-      }
-      if (this.loginInfo['userId'] && this.loginInfo['token']) {
-        return {data: args, userId: this.loginInfo['userId'], token: this.loginInfo['token']}
-      }
+        console.info('post data', args)
+      })
       return {data: args}
     },
     // 处理upload提交的数据
