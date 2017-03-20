@@ -376,6 +376,9 @@ export default {
         if (_.has(apiList, 'debug')) {
           delete apiList.debug
         }
+        if (_.has(apiList, 'ret')) {
+          delete apiList.ret
+        }
         this.apiList = apiList
         this.apiNameArr = apiList
         this.classNameArr = _.keys(apiList)
