@@ -120,7 +120,7 @@
             </el-tooltip>
 
           </el-card>
-          <!--userId 与 token 显示-->
+          <!--userId 显示-->
           <el-card class="loginInfo">
             <el-popover
               ref="popover1"
@@ -146,7 +146,7 @@
                   <el-button  icon="close" type="small"
                               @click="removeCommonUseApi(item.className, item.apiName)"></el-button>
                   <el-button  type="small"
-                             @click="clickApi(item.className, item.apiName)">{{item.className + '_' + item.apiName}}</el-button>
+                             @click="clickCommonApi(item)">{{item.className + '_' + item.apiName}}</el-button>
                 </el-button-group>
               </div>
             </template>
@@ -235,7 +235,7 @@ export default {
   },
   mounted () {
     // 取出cookie
-    let loginInfo = cookie.saveLoginInfo()
+    let loginInfo = cookie.getLoginInfo()
     let useServer = cookie.getUseServer()
     let commonUseApiList = cookie.getCommonUseApiList()
     let commonUseServerUrl = cookie.getCommonUseServerUrl()
@@ -270,10 +270,19 @@ export default {
       }
       this.form = form
     },
+    clickCommonApi (item) {
+      let className = item.className
+      let apiName = item.apiName
+      let form = item.form
+      this.clickApi(className, apiName)
+      if (!_.isEmpty(form)) {
+        this.form = form
+      }
+    },
     // 提交表单
     onSubmit () {
-      console.log('submit!')
-      console.log('form: ', this.form)
+      console.group('Submit to ' + this.useServer)
+      console.log('send form data: ', this.form)
       if (!this.api) {
         console.error('未选择接口')
         return ''
@@ -283,7 +292,6 @@ export default {
       // 发送请求
       let questUrl = this.useServer + '/' + this.api
       let form = this.handleArgs()
-      console.info(form)
       if (!this.isHprose) {
         apiControl.post(questUrl, form, (error, response, body) => {
           if (error) {
@@ -302,23 +310,39 @@ export default {
     },
     parseSubmitReturn (result) {
       // 处理接口返回值
-      console.info('接口' + this.api + '返回数据 :', result)
       this.result = result
       this.treeResult = this.handleResultToTree(result)
       this.recordCommonUseApi()   // 调用记录
       // 计算接口调用使用时间 =>毫秒
       this.endTime = (new Date()).getTime()
       this.allDoTime = this.endTime - this.startTime
-      // todo 记录登陆凭证
+      // 记录登陆凭证
       if (_.has(result, 'user')) {
+        console.info('接口' + this.api + '登陆成功,userId :', result.user.userId)
         this.loginInfo = result.user
-      } else {
-        this.loginInfo = {}
+        cookie.saveLoginInfo(result.user)
       }
+      if (_.has(result, 'ret.code')) {
+        if (result.ret.code === 'ok') {
+          console.info('接口' + this.api + '返回成功数据 :', result)
+          this.$message({
+            type: 'success',
+            message: '操作执行成功'
+          })
+        } else {
+          console.error('接口' + this.api + '返回失败数据 :', result)
+          console.error('error code: ' + result.ret.code)
+          console.error('error msg: ' + result.ret.msg)
+          this.$message({
+            type: 'error',
+            message: result.ret.msg
+          })
+        }
+      }
+      console.groupEnd()
     },
     getClient () {
       if (_.isEmpty(this.client)) {
-        console.info('is empty')
         this.client = hprose.Client.create(this.useServer)
       }
       return this.client
@@ -327,15 +351,12 @@ export default {
     handleArgs () {
       let args = []
       let form = this.form
-      console.info(form)
       _.forEach(form, (value, key) => {
-        console.info(value, key)
         if (this.form[key]) {
           args.push(JSON.parse(value))
         } else {
           args.push('')
         }
-        console.info('post data', args)
       })
       if (this.isHprose) {
         return {data: args}
@@ -453,7 +474,8 @@ export default {
       if (className && apiName) {
         apiInfoObj = {
           className: className,
-          apiName: apiName
+          apiName: apiName,
+          form: this.form
         }
       }
       let fullApiName = apiInfoObj['className'] + '_' + apiInfoObj['apiName']   // 完整api名称
@@ -466,7 +488,8 @@ export default {
           className: apiInfoObj['className'],
           apiName: apiInfoObj['apiName'],
           use: 1,
-          server: server
+          server: server,
+          form: this.form
         }
         this.commonUseApiList = _.set(_.cloneDeep(this.commonUseApiList), server + '.' + fullApiName, initData)
       }
@@ -637,7 +660,7 @@ export default {
   },
   watch: {
     commonUseApiList: function (val, oldVal) {
-      cookie.getCommonUseApiList(val)
+      cookie.saveCommonUseApiList(val)
     },
     commonUseServerUrl: function (val, oldVal) {
       cookie.saveCommonUseServerUrl(val)
