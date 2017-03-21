@@ -358,10 +358,13 @@ export default {
           args.push('')
         }
       })
+      let loginInfo = this.loginInfo
+      let userId = _.get(loginInfo, 'userId', '')
+      let token = _.get(loginInfo, 'token', '')
       if (this.isHprose) {
-        return {data: args}
+        return {data: args, userId: userId, token: token}
       } else {
-        return {data: args, isHttp: true}
+        return {data: args, isHttp: true, userId: userId, token: token}
       }
     },
     // 处理upload提交的数据
