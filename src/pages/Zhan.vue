@@ -122,15 +122,12 @@
           </el-card>
           <!--userId 显示-->
           <el-card class="loginInfo">
-            <el-popover
-              ref="popover1"
-              placement="bottom"
-              title=""
-              width=""
-              trigger="click"
-              :content="userId">
-            </el-popover>
-            <el-button v-popover:popover1>userId</el-button>
+            <el-tooltip content="userId">
+              <el-tag>{{userId}}</el-tag>
+            </el-tooltip>
+            <el-tooltip content="type">
+              <el-tag>{{type}}</el-tag>
+            </el-tooltip>
           </el-card>
         </el-row>
         <!--常用api-->
@@ -361,10 +358,11 @@ export default {
       let loginInfo = this.loginInfo
       let userId = _.get(loginInfo, 'userId', '')
       let token = _.get(loginInfo, 'token', '')
+      let type = _.get(loginInfo, 'type', '')
       if (this.isHprose) {
-        return {data: args, userId: userId, token: token}
+        return {data: args, userId: userId, token: token, type: type}
       } else {
-        return {data: args, isHttp: true, userId: userId, token: token}
+        return {data: args, isHttp: true, userId: userId, token: token, type: type}
       }
     },
     // 处理upload提交的数据
@@ -656,6 +654,9 @@ export default {
     },
     token () {
       return _.get(this.loginInfo, 'token', '') + ''
+    },
+    type () {
+      return _.get(this.loginInfo, 'type', '') + ''
     }
   },
   filters: {
